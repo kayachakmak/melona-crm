@@ -1,12 +1,17 @@
 import express from 'express'
 import cors from 'cors'
+import path from 'path'
 import { db } from './db.js'
 
 const app = express()
-const PORT = 3001
+const PORT = process.env.PORT ? Number(process.env.PORT) : 3001
 
 app.use(cors())
 app.use(express.json())
+
+// Serve frontend in production
+const distPath = path.join(import.meta.dirname, '..', 'dist')
+app.use(express.static(distPath))
 
 app.get('/api/entries', (_req, res) => {
   const entries = db.prepare('SELECT * FROM entries ORDER BY flight_departure_time ASC').all()
@@ -73,6 +78,11 @@ app.patch('/api/entries/:id', (req, res) => {
 app.delete('/api/entries/:id', (req, res) => {
   db.prepare('DELETE FROM entries WHERE id = ?').run(req.params.id)
   res.status(204).end()
+})
+
+// SPA fallback — serve index.html for any non-API route
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'))
 })
 
 app.listen(PORT, () => {
